@@ -5,6 +5,7 @@ to make that package directly executable
 
 from .cli import parse_arguments
 from .loader import load_map
+from .models import Connection, Hub, MapConfig, Route
 from .parser import parse_map
 from .graph import Graph
 
@@ -20,22 +21,23 @@ def main() -> None:
         graph = Graph(map_config)
         # print(graph.adjacency)
         routes: list[Route] = []
-        excluded: set = set()
-        route = graph.run(excluded)
-        routes.append(route)
+        while True:
+            try:
+                new_route = graph.run()
+            except ValueError:
+                break
+            routes.append(new_route)
         print()
-        excluded = {"path_a", "path_aa"}
-        route = graph.run(excluded)
-        routes.append(route)
         for route in routes:
             print([hub.name for hub in route.hubs])
             print([f"{c.end1.name}-{c.end2.name}" for c in route.connections])
             print(route.cost)
-    except (FileNotFoundError, ValueError, Exception) as e:
+            print()
+    except Exception as e:
         print(f"Error: {e}")
         return
-    # for dick in line_config:
-    #     print(dick)
+    # for lin in line_config:
+    #     print(lin)
     # print()
 
     # for l_nb, typ, attrs in line_config:

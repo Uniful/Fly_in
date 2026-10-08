@@ -21,14 +21,18 @@ class Hub(BaseModel):
     x: int
     y: int
     zone: ZoneType = ZoneType.NORMAL
-    zone_capacity: int = Field(gt=0, default=1, alias='max_drones')
+    max_capacity: int = Field(gt=0, default=1, alias='max_drones')
+    remaining_capacity: int = Field(gt=0, default=1, alias='max_drones')
     color: str = "gray"
 
 class Connection(BaseModel):
     l_nb: int  # 5
     end1: Hub  # start
     end2: Hub  # junction1
-    link_capacity: int = Field(gt=0, default=1, alias='max_link_capacity')
+    max_capacity: int = Field(gt=0, default=1, alias='max_link_capacity')
+    remaining_capacity: int = Field(gt=0, default=1, alias='max_link_capacity')
+    def key(self) -> frozenset[str]:
+        return frozenset({self.end1.name, self.end2.name})
 
 class MapConfig(BaseModel):
     nbr_drones: int = Field(gt=0)

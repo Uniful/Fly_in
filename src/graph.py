@@ -97,6 +97,9 @@ class Graph:
             if before is None:
                 raise ValueError("No path from start to end")
             before_hub: Hub = self.get_hub(before)
+            if before_hub.remaining_capacity >= 1 and before_hub != self.start and before_hub != self.end:
+                before_hub.remaining_capacity -= 1
+                print(f"hub r backwards: {before_hub.remaining_capacity}")
             start_end_hubs.append(before_hub)
             current = before_hub
         start_end_hubs.reverse()
@@ -110,31 +113,48 @@ class Graph:
             hub1 = path_hubs[i]
             hub2 = path_hubs[i + 1]
             connection = self.get_connection(hub1.name, hub2.name)
+            if connection.remaining_capacity >= 1:
+                print(f"connection r before: {connection.remaining_capacity}")
+                connection.remaining_capacity -= 1
+                print(f"connection r: {connection.remaining_capacity}")
+                print(f"{connection.end1.name}-{connection.end2.name}")
+                print()
             start_end_connections.append(connection)
         return start_end_connections
 
-    def run(self, excluded: set[str]) -> Route:
+    def run(self) -> Route:
+        '''
+        find the shortest path from start to end considering distances
+        start = current
+        '''
         if self.start is None or self.end is None:
             raise ValueError("Graph has no start or end hub")
         current: str = self.start.name  # just take a name of Hub
+        # start: 0.0, the rest: float("inf")
         distances: dict[str, float] = self.init_distances()
         previous: dict[str, str | None] = {self.start.name: None}
         visited: set[str] = set()
         while True:
-            # for Hub in list of its neighbouring hubs
+            # for Hub in list of its neighbouring hubs, check capacity
             for neighbour in self.neighbours(current):
-                if neighbour.name in excluded:
+                if (neighbour.role == HubRole.REGULAR
+                        and neighbour.remaining_capacity < 1):
                     continue
+                connection = self.get_connection(current, neighbour.name)
+                if connection.remaining_capacity < 1:
+                    continue
+
                 movement_cost = self.get_cost(neighbour.zone)
-                if movement_cost is None:
+                if movement_cost is None:  # hub.zone is blocked
                     continue
                 new_distance = distances[current] + movement_cost
-                # update distance from start if cheaper
+                # update distance from start if cheaper  # b: 1.0
                 if new_distance < distances[neighbour.name]:
                     distances[neighbour.name] = new_distance
                     previous[neighbour.name] = current
+
             visited.add(current)
-            # end reached
+            # when end is reached
             if current == self.end.name:
                 break
             # choose the next lowest from distances
@@ -155,6 +175,7 @@ class Graph:
             # print(next_hub)
         # print(previous)
         path=self.reconstruct_path(previous)
+        print(path)
         path_hubs=self.reconstruct_hubs(previous)
         path_connections=self.reconstruct_connections(path_hubs)
         return Route(
