@@ -8,6 +8,8 @@ from .loader import load_map
 from .models import Connection, Hub, MapConfig, Route
 from .parser import parse_map
 from .graph import Graph
+from .planner import Planner
+from .simulator import Simulator
 
 
 def main() -> None:
@@ -33,6 +35,13 @@ def main() -> None:
             print([f"{c.end1.name}-{c.end2.name}" for c in route.connections])
             print(route.cost)
             print()
+        plan = Planner(routes, map_config.nb_drones)
+        plan.assign_drones()  # how many drones to each of the routes
+        simulator = Simulator(map_config, routes)
+        simulator.create_drones()
+        for hub in map_config.hubs:
+            print(simulator.hub_occupancy(hub))
+        simulator.move()
     except Exception as e:
         print(f"Error: {e}")
         return

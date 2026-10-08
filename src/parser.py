@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 # start_hub: start 0 0 [zone=priority color=cyan max_drones=3]
 def parse_map(lines: list[tuple[int, str, list[str]]]) -> MapConfig:
-    # nbr_drones: int = 0
+    # nb_drones: int = 0
     hubs: list[Hub] = []
     connections: list[Connection] = []
     if not lines:
@@ -15,8 +15,8 @@ def parse_map(lines: list[tuple[int, str, list[str]]]) -> MapConfig:
         raise ValueError(f"line {l_nb}: nb_drones to be 1st configration line")
     if len(attrs) != 1:  # only one info allowed in nb_drones: int
         raise ValueError(f"line {l_nb}: Usage: nb_drones: <int>")
-    nbr_drones: str = attrs[0]  # nb will be converted with pydantic model validataion
-    print(nbr_drones)
+    nb_drones: str = attrs[0]  # nb will be converted with pydantic model validataion
+    print(nb_drones)
     for l_nb, typ, attrs in lines[1:]:
         match typ:
             case "nb_drones":
@@ -37,7 +37,7 @@ def parse_map(lines: list[tuple[int, str, list[str]]]) -> MapConfig:
             case _:
                 raise ValueError(f"line {l_nb}: unrecognised data: {typ}")
     return MapConfig(
-        nbr_drones=nbr_drones,
+        nb_drones=nb_drones,
         hubs=hubs,
         connections=connections,
     )

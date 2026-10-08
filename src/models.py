@@ -35,7 +35,7 @@ class Connection(BaseModel):
         return frozenset({self.end1.name, self.end2.name})
 
 class MapConfig(BaseModel):
-    nbr_drones: int = Field(gt=0)
+    nb_drones: int = Field(gt=0)
     hubs: list[Hub] = Field(default_factory=list)
     connections: list[Connection] = Field(default_factory=list)
     @model_validator(mode='after')
@@ -59,4 +59,12 @@ class Route(BaseModel):
     hubs: list[Hub]
     connections: list[Connection]
     cost: int
-    nbr_drones: int = 0
+    nb_drones: int = 0
+
+class Drone(BaseModel):
+    id: int
+    route: Route
+    # position: intex in route.hubs
+    # current hub is: drone.route.hubs[drone.position]
+    position: int = 0
+    connection: Connection | None = None
