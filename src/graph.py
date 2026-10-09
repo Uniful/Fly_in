@@ -2,6 +2,7 @@
 
 from .models import MapConfig, Connection, Hub, HubRole, ZoneType, Route
 
+
 class Graph:
     def __init__(self, config: MapConfig) -> None:
         self.hubs: list[Hub] = config.hubs
@@ -17,7 +18,7 @@ class Graph:
             hub_connections: list[Connection] = []
             for connection in config.connections:
                 if (hub.name == connection.end1.name
-                or hub.name == connection.end2.name):
+                        or hub.name == connection.end2.name):
                     hub_connections.append(connection)
             # A: [start-A, A-B]
             self.adjacency[hub.name] = hub_connections
@@ -61,14 +62,14 @@ class Graph:
     def get_connection(self, hub1: str, hub2: str) -> Connection:
         for connection in self.connections:
             if (
-            (hub1 == connection.end1.name and hub2 == connection.end2.name)
-            or
-            (hub1 == connection.end2.name and hub2 == connection.end1.name)):
+                (hub1 == connection.end1.name and hub2 == connection.end2.name)
+                or
+                (hub1 == connection.end2.name and hub2 == connection.end1.name)):
                 return connection
         raise ValueError(f"Connection '{hub1}'-'{hub2}' does not exist")
 
-    def reconstruct_path(self, 
-            previous: dict[str, str | None]) -> list[str]:
+    def reconstruct_path(self,
+                         previous: dict[str, str | None]) -> list[str]:
         if self.start is None or self.end is None:
             raise ValueError("Graph has no start or end hub")
         current: str = self.end.name
@@ -84,10 +85,10 @@ class Graph:
         # print(start_end_path)
         # start, junction, path_b, goal
         return start_end_path
-    
+
     # change string-string path from dijkstra path to hubs
     def reconstruct_hubs(self,
-            previous: dict[str, str | None]) -> list[Hub]:
+                         previous: dict[str, str | None]) -> list[Hub]:
         if self.start is None or self.end is None:
             raise ValueError("Graph has no start or end hub")
         current: Hub = self.end
@@ -107,7 +108,7 @@ class Graph:
 
     # from dijkstra Hub path to Connection list
     def reconstruct_connections(self,
-            path_hubs: list[Hub]) -> list[Connection]:
+                                path_hubs: list[Hub]) -> list[Connection]:
         start_end_connections: list[Connection] = []
         for i in range(len(path_hubs) - 1):
             hub1 = path_hubs[i]
@@ -183,7 +184,3 @@ class Graph:
             connections=path_connections,
             cost=int(distances[self.end.name]),
         )
-
-        
-        
-            

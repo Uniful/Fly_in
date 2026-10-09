@@ -2,6 +2,7 @@
 
 from .models import Route
 
+
 class Planner:
     def __init__(self, routes: list[Route], nb_drones: int) -> None:
         self.routes = routes
@@ -19,4 +20,3 @@ class Planner:
             best_route.nb_drones += 1
         # for route in self.routes:
         #     print({route.nb_drones})
-

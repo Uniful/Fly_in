@@ -3,6 +3,7 @@
 from .models import Hub, Connection, MapConfig, HubRole, ZoneType
 from pydantic import ValidationError
 
+
 # start_hub: start 0 0 [zone=priority color=cyan max_drones=3]
 def parse_map(lines: list[tuple[int, str, list[str]]]) -> MapConfig:
     # nb_drones: int = 0
@@ -63,7 +64,7 @@ def hub_config(l_nb: int, typ: str, attrs: list[str]) -> Hub:
         metadata_parts[0] = metadata_parts[0].removeprefix("[")
         metadata_parts[-1] = metadata_parts[-1].removesuffix("]")
         # print(metadata_parts)
-        
+
         for part in metadata_parts:
             if "=" not in part:
                 raise ValueError(f"line {l_nb}: invalid metadata {part}")
@@ -140,7 +141,7 @@ def connect_config(l_nb: int, attrs: list[str], hubs: list[Hub]) -> Connection:
         raise ValueError(f"line: {l_nb}: {e}") from e
 
 def connection_exists(
-    connection: Connection, connections: list[Connection]) -> bool:
+        connection: Connection, connections: list[Connection]) -> bool:
     for already in connections:
         same_connection: bool = (
             already.end1 == connection.end1
@@ -153,5 +154,3 @@ def connection_exists(
         if same_connection or opposite_connection:
             return True
     return False
-
-

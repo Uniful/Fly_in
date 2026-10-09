@@ -39,6 +39,8 @@ clean:
 #     find command deletes __pycache__ in ALL subdirectories, also in llm_sdk
 
 fclean:
+	clean
+	@echo "Cleaning up virtual environment"
 	rm -rf .venv
 
 lint:

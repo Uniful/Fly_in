@@ -1,6 +1,7 @@
 # simulator.py
 
-from .models import MapConfig, Hub, Connection, Route, Drone
+from .models import MapConfig, HubRole, Hub, Connection, Route, Drone
+
 
 class Simulator:
     def __init__(self, config: MapConfig, routes: list[Route]) -> None:
@@ -42,12 +43,11 @@ class Simulator:
         if hub.role in (HubRole.START, HubRole.END):
             return True
         return self.hub_occupancy(hub) < hub.max_capacity
-        
+
     def is_connection_free(self, connection: Connection) -> bool:
         return self.connection_occupancy(connection) < connection.max_capacity
-        
 
-    def can_move(sefl, drone: Drone) -> bool:
+    def can_move(self, drone: Drone) -> bool:
         if not self.is_hub_free(next_hub):
             return False
         if not self.is_connection_free(connection):
@@ -60,18 +60,18 @@ class Simulator:
                   f"{drone.route.hubs[drone.position].name} ", end="")
         print()
         # how far is the drone from the end
-        drones_to_move = sorted(
+        drones_to_move: list[Drone] = sorted(
             self.drones,
             key=lambda drone: len(drone.route.hubs) - 1 - drone.position
         )
-        
-        for drone in drones_to_move:
-            if drone.connection is not None:
-                # finish transit
-            else:
-                # try normal movement
 
-        for drone in drones_to_move:
-            print(f"D{drone.id}-"
-                  f"{drone.route.hubs[drone.position].name} ", end="")
-        print()
+        # for drone in drones_to_move:
+        #     if drone.connection is not None:
+        #         # finish transit
+        #     else:
+        #         # try normal movement
+
+        # for drone in drones_to_move:
+        #     print(f"D{drone.id}-"
+        #           f"{drone.route.hubs[drone.position].name} ", end="")
+        # print()

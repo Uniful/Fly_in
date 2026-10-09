@@ -3,16 +3,19 @@
 from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
+
 class HubRole(str, Enum):
     START = "start"
     REGULAR = "regular"
     END = "end"
+
 
 class ZoneType(str, Enum):
     NORMAL = "normal"
     BLOCKED = "blocked"
     RESTRICTED = "restricted"
     PRIORITY = "priority"
+
 
 class Hub(BaseModel):
     l_nb: int
@@ -25,6 +28,7 @@ class Hub(BaseModel):
     remaining_capacity: int = Field(gt=0, default=1, alias='max_drones')
     color: str = "gray"
 
+
 class Connection(BaseModel):
     l_nb: int  # 5
     end1: Hub  # start
@@ -34,10 +38,12 @@ class Connection(BaseModel):
     def key(self) -> frozenset[str]:
         return frozenset({self.end1.name, self.end2.name})
 
+
 class MapConfig(BaseModel):
     nb_drones: int = Field(gt=0)
     hubs: list[Hub] = Field(default_factory=list)
     connections: list[Connection] = Field(default_factory=list)
+
     @model_validator(mode='after')
     def validate_rules(self) -> 'MapConfig':
         start_count = 0
@@ -55,11 +61,13 @@ class MapConfig(BaseModel):
                 f"exactly one end_hub required, found {end_count}")
         return self
 
+
 class Route(BaseModel):
     hubs: list[Hub]
     connections: list[Connection]
     cost: int
     nb_drones: int = 0
+
 
 class Drone(BaseModel):
     id: int
