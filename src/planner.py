@@ -18,5 +18,5 @@ class Planner:
                     estimated_cost = estimating
                     best_route = route
             best_route.nb_drones += 1
-        # for route in self.routes:
-        #     print({route.nb_drones})
+        for route in self.routes:
+            print({route.nb_drones})
