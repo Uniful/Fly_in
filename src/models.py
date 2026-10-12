@@ -37,6 +37,8 @@ class Connection(BaseModel):
     remaining_capacity: int = Field(gt=0, default=1, alias='max_link_capacity')
     def key(self) -> frozenset[str]:
         return frozenset({self.end1.name, self.end2.name})
+    def name(self) -> str:
+        return f"{self.end1.name}-{self.end2.name}"
 
 
 class MapConfig(BaseModel):
@@ -46,6 +48,7 @@ class MapConfig(BaseModel):
 
     @model_validator(mode='after')
     def validate_rules(self) -> 'MapConfig':
+        '''checking if just one start and one end hub'''
         start_count = 0
         end_count = 0
         for hub in self.hubs:
@@ -75,4 +78,7 @@ class Drone(BaseModel):
     # position: intex in route.hubs
     # current hub is: drone.route.hubs[drone.position]
     position: int = 0
+    future_position: int = 0
     connection: Connection | None = None
+    future_connection: Connection | None = None
+    arrived: bool = False

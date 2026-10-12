@@ -39,9 +39,10 @@ def main() -> None:
         plan.assign_drones()  # how many drones to each of the routes
         simulator = Simulator(map_config, routes)
         simulator.run()
-        for hub in map_config.hubs:
-            print(simulator.hub_occupancy(hub))
-        simulator.move()
+        # see that all are arrived to the end hub:
+        # for hub in map_config.hubs:
+        #     print(simulator.hub_occupancy(hub))
+
     except Exception as e:
         print(f"Error: {e}")
         return

@@ -6,7 +6,7 @@ hub: junction 1 0 [color=yellow max_drones=2]
 hub: path_a 2 1 [color=blue]
 # hub: path_aa 2 1 [color=blue]
 hub: path_b 2 -1 [color=blue]
-hub: path_bb 2 -1 [color=blue]
+hub: path_bb 2 -1 [color=blue zone=restricted]
 end_hub: goal 3 0 [color=red]
 
 connection: start-junction [max_link_capacity=2]
