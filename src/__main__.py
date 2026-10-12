@@ -33,7 +33,7 @@ def main() -> None:
         for route in routes:
             print([hub.name for hub in route.hubs])
             print([f"{c.end1.name}-{c.end2.name}" for c in route.connections])
-            print(route.cost)
+            print(f"route cost: {route.cost}")
             print()
         plan = Planner(routes, map_config.nb_drones)
         plan.assign_drones()  # how many drones to each of the routes

@@ -18,5 +18,6 @@ class Planner:
                     estimated_cost = estimating
                     best_route = route
             best_route.nb_drones += 1
-        for route in self.routes:
-            print({route.nb_drones})
+        for i, route in enumerate(self.routes, start=1):
+            print(f"nb of drones assigned to route {i}: {route.nb_drones}")
+        print()

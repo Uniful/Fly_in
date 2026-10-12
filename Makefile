@@ -1,5 +1,6 @@
 # MAP ?= maps/easy/01_linear_path.txt
 # MAP ?= maps/easy/02_simple_fork.txt
+# MAP ?= maps/easy/02_simple_fork_modified.txt
 # MAP ?= maps/easy/03_basic_capacity.txt
 # MAP ?= maps/medium/01_dead_end_trap.txt
 # MAP ?= maps/medium/02_circular_loop.txt
@@ -23,7 +24,7 @@ debug:
 	uv run python -m pdb -m src
 
 clean:
-	@echo "Cleaning up..."
+	@echo "Cleaning up cache..."
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
@@ -38,7 +39,7 @@ clean:
 #     rm -rf __pycache__ deletes __pycache__ ONLY in the current directory
 #     find command deletes __pycache__ in ALL subdirectories, also in llm_sdk
 
-fclean:
+fclean: clean
 	@echo "Cleaning up virtual environment"
 	rm -rf .venv
 
@@ -66,4 +67,4 @@ help:
 	@echo " make lint-strict	- Run flake8 + mypy --strict"
 	@echo " make help			- Show this help message"
 
-.PHONY: install run debug clean lint lint-strict
+.PHONY: install run debug clean fclean lint lint-strict

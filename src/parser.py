@@ -17,7 +17,7 @@ def parse_map(lines: list[tuple[int, str, list[str]]]) -> MapConfig:
     if len(attrs) != 1:  # only one info allowed in nb_drones: int
         raise ValueError(f"line {l_nb}: Usage: nb_drones: <int>")
     nb_drones: str = attrs[0]  # nb will be converted with pydantic model validataion
-    print(nb_drones)
+    print(f"nb of drones: {nb_drones}")
     for l_nb, typ, attrs in lines[1:]:
         match typ:
             case "nb_drones":

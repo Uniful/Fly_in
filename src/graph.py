@@ -100,7 +100,7 @@ class Graph:
             before_hub: Hub = self.get_hub(before)
             if before_hub.remaining_capacity >= 1 and before_hub != self.start and before_hub != self.end:
                 before_hub.remaining_capacity -= 1
-                print(f"hub r backwards: {before_hub.remaining_capacity}")
+                # print(f"hub r backwards: {before_hub.remaining_capacity}")
             start_end_hubs.append(before_hub)
             current = before_hub
         start_end_hubs.reverse()
@@ -115,11 +115,7 @@ class Graph:
             hub2 = path_hubs[i + 1]
             connection = self.get_connection(hub1.name, hub2.name)
             if connection.remaining_capacity >= 1:
-                print(f"connection r before: {connection.remaining_capacity}")
                 connection.remaining_capacity -= 1
-                print(f"connection r: {connection.remaining_capacity}")
-                print(f"{connection.end1.name}-{connection.end2.name}")
-                print()
             start_end_connections.append(connection)
         return start_end_connections
 
@@ -176,7 +172,7 @@ class Graph:
             # print(next_hub)
         # print(previous)
         path=self.reconstruct_path(previous)
-        print(path)
+        # print(path)
         path_hubs=self.reconstruct_hubs(previous)
         path_connections=self.reconstruct_connections(path_hubs)
         return Route(
