@@ -77,7 +77,7 @@ class Simulator:
                       f"D{drone.id}-"
                       f"{hub.name} "
                       f"{Colors.RESET}", end="")
-        # print()
+        print()
 
     # def print_output_line(self, n_turns: int) -> None:
     #     print(f"{n_turns}: ", end="")
@@ -92,7 +92,7 @@ class Simulator:
     #         else:
     #             print(f"D{drone.id}-"
     #                   f"{drone.route.connections[drone.position].name()} ", end="")
-        print()
+    #     print()
 
     def free_slots_next_turn(self, hub: Hub) -> int:
         '''

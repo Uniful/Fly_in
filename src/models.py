@@ -25,13 +25,8 @@ class Hub(BaseModel):
     y: int
     zone: ZoneType = ZoneType.NORMAL
     max_capacity: int = Field(gt=0, default=1, alias='max_drones')
-    remaining_capacity: int = 1
+    remaining_capacity: int = Field(ge=0, default=1, alias='max_drones')
     color: str = "none"
-
-    @model_validator(mode="after")
-    def set_remaining_capacity(self) -> "Hub":
-        self.remaining_capacity = self.max_capacity
-        return self
 
 
 class Connection(BaseModel):
@@ -39,12 +34,7 @@ class Connection(BaseModel):
     end1: Hub  # start
     end2: Hub  # junction1
     max_capacity: int = Field(gt=0, default=1, alias='max_link_capacity')
-    remaining_capacity: int = 1
-
-    @model_validator(mode="after")
-    def set_remaining_capacity(self) -> "Connection":
-        self.remaining_capacity = self.max_capacity
-        return self
+    remaining_capacity: int = Field(ge=0, default=1, alias='max_link_capacity')
 
     def key(self) -> frozenset[str]:
         return frozenset({self.end1.name, self.end2.name})
