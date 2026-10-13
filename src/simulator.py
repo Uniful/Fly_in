@@ -1,6 +1,7 @@
 # simulator.py
 
 from .models import MapConfig, ZoneType, HubRole, Hub, Connection, Route, Drone
+from .colors import Colors
 
 
 class Simulator:
@@ -57,29 +58,40 @@ class Simulator:
             for drone in self.drones
         )
 
-    def print_output_line(self, n_turns: int) -> None:
-    # def print_output_line(self, 
-    #                       n_turns: int, 
-    #                       moves: list[tuple[Drone, bool]]) -> None:
+    def print_output_line(self, 
+                          n_turns: int, 
+                          moves: list[tuple[Drone, bool]]) -> None:
         print(f"{n_turns}: ", end="")
-        # for drone, entering_connection in moves:
-        #     if entering_connection:
-        #         print(f"D{drone.id}-"
-        #               f"{drone.connection.name()} ", end="")
-        #     else:
-        #         print(f"D{drone.id}-"
-        #               f"{drone.route.hubs[drone.position].name} ", end="")
-        for drone in self.drones:
-            if drone.arrived:
-                continue
-            if drone.connection == None:
-                if drone.position == 0:
-                    continue 
-                print(f"D{drone.id}-"
-                      f"{drone.route.hubs[drone.position].name} ", end="")
+        for drone, entering_connection in moves:
+            if entering_connection:
+                # hub = drone.route.hubs[drone.position + 1]
+                color_code = Colors.DEFAULT
+                print(f"{color_code}"
+                      f"D{drone.id}-"
+                      f"{drone.route.connections[drone.position].name()} "
+                      f"{Colors.RESET}", end="")
             else:
-                print(f"D{drone.id}-"
-                      f"{drone.route.connections[drone.position].name()} ", end="")
+                hub = drone.route.hubs[drone.position]
+                color_code = Colors.get(hub.color)
+                print(f"{color_code}"
+                      f"D{drone.id}-"
+                      f"{hub.name} "
+                      f"{Colors.RESET}", end="")
+        # print()
+
+    # def print_output_line(self, n_turns: int) -> None:
+    #     print(f"{n_turns}: ", end="")
+    #     for drone in self.drones:
+    #         if drone.arrived:
+    #             continue
+    #         if drone.connection == None:
+    #             if drone.position == 0:
+    #                 continue 
+    #             print(f"D{drone.id}-"
+    #                   f"{drone.route.hubs[drone.position].name} ", end="")
+    #         else:
+    #             print(f"D{drone.id}-"
+    #                   f"{drone.route.connections[drone.position].name()} ", end="")
         print()
 
     def free_slots_next_turn(self, hub: Hub) -> int:
@@ -207,6 +219,6 @@ class Simulator:
             moves: list[tuple[Drone, bool]] = self.move_plan()
             self.move(moves)
             n_turns += 1
-            self.print_output_line(n_turns)
-            # self.print_output_line(n_turns, moves)
+            # self.print_output_line(n_turns)
+            self.print_output_line(n_turns, moves)
 
