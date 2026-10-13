@@ -6,7 +6,7 @@ to make that package directly executable
 from .cli import parse_arguments
 from .loader import load_map
 from .models import Connection, Hub, MapConfig, Route
-from .parser import parse_map
+from .parser import Parser
 from .graph import Graph
 from .planner import Planner
 from .simulator import Simulator
@@ -19,7 +19,8 @@ def main() -> None:
     line_config: list[tuple[int, str, list[str]]] = []
     try:
         line_config = (load_map(args.mapfile))
-        map_config: MapConfig = parse_map(line_config)
+        parser = Parser(line_config)
+        map_config: MapConfig = parser.parse_map()
         graph = Graph(map_config)
         # print(graph.adjacency)
         routes: list[Route] = []
