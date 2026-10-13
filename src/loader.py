@@ -9,8 +9,9 @@ def load_map(filename: str) -> list[tuple[int, str, list[str]]]:
                 # ignore empty lines and comments
                 if not line or line.startswith('#'):
                     continue
-                name, attrs = line.split(':', 1)  # maybe here to split value again and make it a list
-                name, attrs = name.strip(), attrs.strip().split()  # splits at space ' ' (default)
+                name, attrs = line.split(':', 1)
+                # splits at space ' ' (default):
+                name, attrs = name.strip(), attrs.strip().split()
                 trio: tuple = (l_nb, name, attrs)
                 map_config.append(trio)
                 # print(map_config)

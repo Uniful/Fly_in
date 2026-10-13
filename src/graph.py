@@ -10,6 +10,8 @@ class Graph:
         self.adjacency: dict[str, list[Connection]] = {}
         self.start: Hub | None = None
         self.end: Hub | None = None
+        # create start/end hubs
+        # create adjacency list of connections for each hub
         for hub in config.hubs:
             if hub.role == HubRole.START:
                 self.start = hub
@@ -64,7 +66,8 @@ class Graph:
             if (
                 (hub1 == connection.end1.name and hub2 == connection.end2.name)
                 or
-                (hub1 == connection.end2.name and hub2 == connection.end1.name)):
+                (hub1 == connection.end2.name and hub2 == connection.end1.name)
+            ):
                 return connection
         raise ValueError(f"Connection '{hub1}'-'{hub2}' does not exist")
 
@@ -94,11 +97,13 @@ class Graph:
         current: Hub = self.end
         start_end_hubs: list[Hub] = [current]
         while current != self.start:
-            before: str = previous.get(current.name)  # starting current end.name
+            before: str = previous.get(current.name)  # starts current end.name
             if before is None:
                 raise ValueError("No path from start to end")
             before_hub: Hub = self.get_hub(before)
-            if before_hub.remaining_capacity >= 1 and before_hub != self.start and before_hub != self.end:
+            if (before_hub.remaining_capacity >= 1
+                    and before_hub != self.start
+                    and before_hub != self.end):
                 before_hub.remaining_capacity -= 1
                 # print(f"hub r backwards: {before_hub.remaining_capacity}")
             start_end_hubs.append(before_hub)
@@ -126,7 +131,7 @@ class Graph:
         '''
         if self.start is None or self.end is None:
             raise ValueError("Graph has no start or end hub")
-        current: str = self.start.name  # just take a name of Hub
+        current: str = self.start.name  # just take a str name of Hub
         # start: 0.0, the rest: float("inf")
         distances: dict[str, float] = self.init_distances()
         previous: dict[str, str | None] = {self.start.name: None}
@@ -171,10 +176,11 @@ class Graph:
             # print(visited)
             # print(next_hub)
         # print(previous)
-        path=self.reconstruct_path(previous)
+        self.reconstruct_path(previous)
+        # path=self.reconstruct_path(previous)
         # print(path)
-        path_hubs=self.reconstruct_hubs(previous)
-        path_connections=self.reconstruct_connections(path_hubs)
+        path_hubs = self.reconstruct_hubs(previous)
+        path_connections = self.reconstruct_connections(path_hubs)
         return Route(
             hubs=path_hubs,
             connections=path_connections,

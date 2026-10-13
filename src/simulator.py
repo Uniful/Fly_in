@@ -15,8 +15,9 @@ class Simulator:
         # print(assigned)
         drone_id: int = 0  # 5 drones
         while drone_id < self.config.nb_drones:  # last one entering without id
-            for i, route in enumerate(self.routes):  # assigns 
-                # will assign 1 drone for each route [1][1], then [2][2], then [3][2]
+            for i, route in enumerate(self.routes):
+                # will assign 1 drone for each route:
+                # [1][1], then [2][2], then [3][2]
                 if assigned[i] < route.nb_drones:
                     drone_id += 1
                     new_drone = Drone(id=drone_id, route=route)
@@ -47,8 +48,8 @@ class Simulator:
             return True
         return self.hub_occupancy(hub) < hub.max_capacity
 
-    # def connection_is_free(self, connection: Connection) -> bool:
-    #     return self.connection_occupancy(connection) < connection.max_capacity
+    # def connection_is_free(self, c: Connection) -> bool:
+    #     return self.connection_occupancy(c) < c.max_capacity
 
     def all_finished(self) -> bool:
         # return True if, for all drones,
@@ -58,8 +59,8 @@ class Simulator:
             for drone in self.drones
         )
 
-    def print_output_line(self, 
-                          n_turns: int, 
+    def print_output_line(self,
+                          n_turns: int,
                           moves: list[tuple[Drone, bool]]) -> None:
         print(f"{n_turns}: ", end="")
         for drone, entering_connection in moves:
@@ -81,17 +82,17 @@ class Simulator:
 
     # def print_output_line(self, n_turns: int) -> None:
     #     print(f"{n_turns}: ", end="")
-    #     for drone in self.drones:
-    #         if drone.arrived:
+    #     for d in self.drones:
+    #         if d.arrived:
     #             continue
-    #         if drone.connection == None:
-    #             if drone.position == 0:
-    #                 continue 
-    #             print(f"D{drone.id}-"
-    #                   f"{drone.route.hubs[drone.position].name} ", end="")
+    #         if d.connection == None:
+    #             if d.position == 0:
+    #                 continue
+    #             print(f"D{d.id}-"
+    #                   f"{d.route.hubs[d.position].name} ", end="")
     #         else:
-    #             print(f"D{drone.id}-"
-    #                   f"{drone.route.connections[drone.position].name()} ", end="")
+    #             print(f"D{d.id}-"
+    #                   f"{d.route.connections[d.position].name()} ", end="")
     #     print()
 
     def free_slots_next_turn(self, hub: Hub) -> int:
@@ -129,15 +130,14 @@ class Simulator:
                 continue
             # for now: END is always available,
             # otherwise require destination capacity
-            if (
-                next_hub.role == HubRole.END
-                or self.hub_is_free(next_hub)):
+            if (next_hub.role == HubRole.END
+                    or self.hub_is_free(next_hub)):
                 leaving += 1
                 connection_uses[name] = used + 1
         staying = len(occupants) - leaving
 
         # protect against a negative result
-        # but capacity calculations should never return negative available places
+        # capacity calculations should not return negative available places
         return max(0, hub.max_capacity - staying)
 
     def move_plan(self) -> list[tuple[Drone, bool]]:
@@ -155,14 +155,14 @@ class Simulator:
         # normal one-turn uses of connections during this turn
         connection_uses: dict[str, int] = {}
         moves: list[tuple[Drone, bool]] = []
-        for drone in drones_to_move:
+        for d in drones_to_move:
             # if drone already reached END
-            if drone.position == len(drone.route.hubs) - 1:
+            if d.position == len(d.route.hubs) - 1:
                 # to exclude arrived drone from tracking/printing:
-                drone.arrived = True
+                d.arrived = True
                 continue
-            next_connection: Connection = drone.route.connections[drone.position]
-            next_hub: Hub = drone.route.hubs[drone.position + 1]
+            next_connection: Connection = d.route.connections[d.position]
+            next_hub: Hub = d.route.hubs[d.position + 1]
             connection_name = next_connection.name()
             # connection occupancy after already planned moves
             # +
@@ -171,45 +171,47 @@ class Simulator:
                 self.connection_occupancy(next_connection)
                 + connection_uses.get(connection_name, 0)
             )
-            if next_hub.zone != ZoneType.RESTRICTED:  # NORMAL MOVEMENT
+            # NORMAL MOVEMENT
+            if next_hub.zone != ZoneType.RESTRICTED:
                 if (next_hub.zone != ZoneType.BLOCKED
-                    and used < next_connection.max_capacity
-                    and self.hub_is_free(next_hub)):
-                    drone.future_position += 1
-                    moves.append((drone, False))
+                        and used < next_connection.max_capacity
+                        and self.hub_is_free(next_hub)):
+                    d.future_position += 1
+                    moves.append((d, False))
                     connection_uses[connection_name] = (
                         connection_uses.get(connection_name, 0) + 1
                     )
-            else:  # next hub.zone is RESTRICTED MOVEMENT
+            # RESTRICTED MOVEMENT - next hub.zone is restricted
+            else:
                 # if drone sits on connection, just check if next hub is free:
-                if drone.connection is not None:
+                if d.connection is not None:
                     if self.hub_is_free(next_hub):  # must be free!!!
-                        drone.future_position += 1  # move to the next hub
-                        drone.future_connection = None  # free the connection
-                        moves.append((drone, False))
+                        d.future_position += 1  # move to the next hub
+                        d.future_connection = None  # free the connection
+                        moves.append((d, False))
                     else:
-                        print(f"drone {drone.id} more than one turn on the connection")
+                        print(f"D{d.id} more than 1 turn on a connection")
                 else:  # drone not yet at the connection
                     reserved = reserved_arrivals.get(next_hub.name, 0)
                     free_next_turn = self.free_slots_next_turn(next_hub)
-
                     if (used < next_connection.max_capacity
-                        and reserved < free_next_turn):
-                        drone.future_connection = next_connection
-                        moves.append((drone, True))
+                            and reserved < free_next_turn):
+                        d.future_connection = next_connection
+                        moves.append((d, True))
                         reserved_arrivals[next_hub.name] = reserved + 1
                     else:
-                        print(f"D{drone.id} stays at {drone.route.hubs[drone.position].name}")
+                        print(f"D{d.id} stays at "
+                              f"{d.route.hubs[d.position].name}")
         return moves
 
     def move(self, moves: list[tuple[Drone, bool]]) -> None:
-        for drone, _ in moves:
-            drone.position = drone.future_position
-            drone.connection = drone.future_connection
+        for d, _ in moves:
+            d.position = d.future_position
+            d.connection = d.future_connection
             # if entering_connection == True:
-            #     drone.connection = drone.future_connection
+            #     d.connection = d.future_connection
             # else:
-            #     drone.position = drone.future_position
+            #     d.position = d.future_position
 
     def run(self) -> None:
         self.create_drones()
@@ -221,4 +223,3 @@ class Simulator:
             n_turns += 1
             # self.print_output_line(n_turns)
             self.print_output_line(n_turns, moves)
-

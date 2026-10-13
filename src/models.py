@@ -38,6 +38,7 @@ class Connection(BaseModel):
 
     def key(self) -> frozenset[str]:
         return frozenset({self.end1.name, self.end2.name})
+
     def name(self) -> str:
         return f"{self.end1.name}-{self.end2.name}"
 

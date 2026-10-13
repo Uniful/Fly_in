@@ -3,9 +3,10 @@ adding __main__.py module to any Python package
 to make that package directly executable
 '''
 
+import argparse
 from .cli import parse_arguments
 from .loader import load_map
-from .models import Connection, Hub, MapConfig, Route
+from .models import MapConfig, Route
 from .parser import Parser
 from .graph import Graph
 from .planner import Planner
