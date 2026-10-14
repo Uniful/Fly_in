@@ -20,7 +20,10 @@ class Parser:
         if len(attrs) != 1:  # only one info allowed in nb_drones: int
             raise ValueError(f"line {l_nb}: Usage: nb_drones: <int>")
         # nb will be converted with pydantic model validatation
-        nb_drones: str = attrs[0]
+        try:
+            nb_drones: int = int(attrs[0])
+        except ValueError as e:
+            raise ValueError(f"line {l_nb}: nb_drones must be integer") from e
         print(f"nb of drones: {nb_drones}")
         for l_nb, typ, attrs in self.lines[1:]:
             match typ:
@@ -51,6 +54,13 @@ class Parser:
         metadata: dict[str, str] = {}  # dict to be fed in Hub object model
         if len(attrs) < 3:
             raise ValueError(f"line {l_nb}: hub needs name, x, y coordinates")
+        # after name, x, y the next token must begin metadata
+        if len(attrs) > 3 and not attrs[3].startswith("["):
+            raise ValueError(
+                f"line {l_nb}: invalid hub format: "
+                "expected <name> <x> <y> [metadata]; "
+                "hub names cannot contain spaces and exactly two coordinates are required"
+            )
         match typ:
             case "start_hub":
                 role = HubRole.START
@@ -93,7 +103,12 @@ class Parser:
                 **metadata,
             )
         except ValidationError as e:
-            raise ValueError(f"line {l_nb}: {e}") from e
+            error = e.errors()[0]
+            field = error["loc"][0]
+            value = error.get("input")
+            raise ValueError(
+                f"line {l_nb}: invalid {field} value '{value}'"
+            ) from e
 
     def hub_exists(self, hub: Hub) -> bool:
         for already in self.hubs:
@@ -144,7 +159,12 @@ class Parser:
                 **metadata,
             )
         except ValidationError as e:
-            raise ValueError(f"line: {l_nb}: {e}") from e
+            error = e.errors()[0]
+            field = error["loc"][0]
+            value = error.get("input")
+            raise ValueError(
+                f"line {l_nb}: invalid {field} value '{value}'"
+            ) from e
 
     def connection_exists(self, connection: Connection) -> bool:
         for already in self.connections:
