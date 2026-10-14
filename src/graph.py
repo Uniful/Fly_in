@@ -10,13 +10,13 @@ class Graph:
         self.adjacency: dict[str, list[Connection]] = {}
         self.start: Hub | None = None
         self.end: Hub | None = None
-        # create start/end hubs
-        # create adjacency list of connections for each hub
         for hub in config.hubs:
+            # create START/END hubs
             if hub.role == HubRole.START:
                 self.start = hub
             elif hub.role == HubRole.END:
                 self.end = hub
+            # create ADJACENCY list of connections for each hub
             hub_connections: list[Connection] = []
             for connection in config.connections:
                 if (hub.name == connection.end1.name
@@ -26,14 +26,14 @@ class Graph:
             self.adjacency[hub.name] = hub_connections
 
     def neighbours(self, hub: str) -> list[Hub]:  # hub: "A"
-        if hub not in self.adjacency:
+        if hub not in self.adjacency:  # checking keys of dict
             raise ValueError(f"Hub '{hub}' does not exist")
         neighbours_list: list[Hub] = []
-        for connection in self.adjacency[hub]:  # connection list for "A"
+        for connection in self.adjacency[hub]:  # for connection in the list
             if hub == connection.end1.name:
-                neighbours_list.append(connection.end2)
+                neighbours_list.append(connection.end2)  # append hub
             elif hub == connection.end2.name:
-                neighbours_list.append(connection.end1)
+                neighbours_list.append(connection.end1)  # append hub
         return neighbours_list
 
     def init_distances(self) -> dict[str, float]:
@@ -134,39 +134,64 @@ class Graph:
         current: str = self.start.name  # just take a str name of Hub
         # start: 0.0, the rest: float("inf")
         distances: dict[str, float] = self.init_distances()
+        priority_scores: dict[str, int] = {
+            hub_name: 0 for hub_name in self.adjacency}
         previous: dict[str, str | None] = {self.start.name: None}
         visited: set[str] = set()
+        # choose the next hub for the route
         while True:
-            # for Hub in list of its neighbouring hubs, check capacity
             for neighbour in self.neighbours(current):
-                if (neighbour.role == HubRole.REGULAR
+                # Hub/Connection capacity check (current, current-neighbour)
+                if (neighbour.role == HubRole.REGULAR  # not checking start/end
                         and neighbour.remaining_capacity < 1):
                     continue
                 connection = self.get_connection(current, neighbour.name)
                 if connection.remaining_capacity < 1:
                     continue
 
+                # calculate cost
                 movement_cost = self.get_cost(neighbour.zone)
                 if movement_cost is None:  # hub.zone is blocked
                     continue
                 new_distance = distances[current] + movement_cost
-                # update distance from start if cheaper  # b: 1.0
-                if new_distance < distances[neighbour.name]:
-                    distances[neighbour.name] = new_distance
-                    previous[neighbour.name] = current
 
-            visited.add(current)
+                # increase priority score for current if zone.PRIORITY:
+                new_priority: int = priority_scores[current]  # 0 initially
+                if neighbour.zone == ZoneType.PRIORITY:
+                    new_priority += 1
+
+                # update "total distance from start" if cheaper  # b: 1.0
+                # update "total priority score"  e.g. b: 2
+                # set current to be previous if true
+                if (new_distance < distances[neighbour.name]
+                    or (new_distance == distances[neighbour.name]
+                        and new_priority > priority_scores[neighbour.name])):
+                    distances[neighbour.name] = new_distance
+                    priority_scores[neighbour.name] = new_priority
+                    previous[neighbour.name] = current
+            visited.add(current)  # start hub added first
+
             # when end is reached
             if current == self.end.name:
                 break
-            # choose the next lowest from distances
-            lowest: float = float("inf")
+
+            # choose the next lowest from distances + prefer higher priority
+            # 1st criterion: shortest n turns, 2nd: most priority hubs
+            lowest_cost: float = float("inf")
+            highest_priority: int = -1
             next_hub: str | None = None
             for hub_name, cost in distances.items():
                 if hub_name in visited:
                     continue
-                if cost < lowest:
-                    lowest = cost
+                if cost == float("inf"):  # don't consider unreachable ones
+                    continue
+                if (cost < lowest_cost
+                        or (cost == lowest_cost  # only those that were visited
+                            # hub priority score initiated to 0 and 0 > -1
+                            # don't consider unreachable nodes as candidates
+                            and priority_scores[hub_name] > highest_priority)):
+                    lowest_cost = cost
+                    highest_priority = priority_scores[hub_name]
                     next_hub = hub_name
             # no hub was left, all visited, hub stayed empty:
             if next_hub is None:
