@@ -27,9 +27,10 @@ def main() -> None:
         # print(graph.adjacency)
         routes: list[Route] = []
         while True:
-            try:
-                new_route = graph.run()
-            except ValueError:
+            new_route = graph.run()
+            if new_route is None:
+                if not routes:
+                    raise ValueError("No path from start to end")
                 break
             routes.append(new_route)
         print()

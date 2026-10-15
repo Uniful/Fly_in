@@ -124,7 +124,7 @@ class Graph:
             start_end_connections.append(connection)
         return start_end_connections
 
-    def run(self) -> Route:
+    def run(self) -> Route | None:
         '''
         find the shortest path from start to end considering distances
         start = current
@@ -200,6 +200,10 @@ class Graph:
             # print(distances)
             # print(visited)
             # print(next_hub)
+
+        # if the end is not included in the dict of route hubs:
+        if self.end.name not in previous:
+            return None
         # print(previous)
         self.reconstruct_path(previous)
         # path=self.reconstruct_path(previous)
