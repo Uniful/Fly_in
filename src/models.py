@@ -20,7 +20,7 @@ class ZoneType(str, Enum):
 class Hub(BaseModel):
     l_nb: int
     role: HubRole = HubRole.REGULAR
-    name: str  # start. junction1, deadend1, end, etc.
+    name: str  # start, junction1, deadend1, end, etc.
     x: int
     y: int
     zone: ZoneType = ZoneType.NORMAL
