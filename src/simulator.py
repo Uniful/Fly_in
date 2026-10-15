@@ -5,10 +5,14 @@ from .colors import Colors
 
 
 class Simulator:
-    def __init__(self, config: MapConfig, routes: list[Route]) -> None:
+    def __init__(self,
+                 config: MapConfig,
+                 routes: list[Route],
+                 show_info: bool = False) -> None:
         self.config = config
         self.routes = routes
         self.drones: list[Drone] = []
+        self.show_info = show_info
 
     def create_drones(self) -> None:
         assigned: list[int] = [0] * len(self.routes)  # [0, 0] if 2 routes
@@ -145,11 +149,16 @@ class Simulator:
         for drone in self.drones:
             drone.future_position = drone.position
             drone.future_connection = drone.connection
-        # drones closest to END are considered first
+        # key for sorted:
+        # -drone.position: higher position first,
+        # drone.connection is None: False comes before True,
+        #   so drones already on a connection come first
+        # drone.id: lower ID first when everything else is equal
         drones_to_move: list[Drone] = sorted(
             self.drones,
-            key=lambda drone: len(drone.route.hubs) - 1 - drone.position
-        )
+            key=lambda drone: (-drone.position,
+                               drone.connection is None,
+                               drone.id))
         # places promised in restricted hubs for the next turn
         reserved_arrivals: dict[str, int] = {}
         # normal one-turn uses of connections during this turn
@@ -213,6 +222,48 @@ class Simulator:
             # else:
             #     d.position = d.future_position
 
+    def print_capacity_info(
+        self,
+        n_turns: int,
+        moves: list[tuple[Drone, bool]],
+    ) -> None:
+        hub_usage: dict[str, int] = {}
+        connection_usage: dict[str, int] = {}
+
+        # Current hub occupancy after the move
+        for drone in self.drones:
+            if drone.connection is None:
+                hub = drone.route.hubs[drone.position]
+                hub_usage[hub.name] = hub_usage.get(hub.name, 0) + 1
+
+        # Connections used during this turn
+        for drone, entering_connection in moves:
+            if entering_connection:
+                connection = drone.route.connections[drone.position]
+            else:
+                connection = drone.route.connections[drone.position - 1]
+
+            name = connection.name()
+            connection_usage[name] = connection_usage.get(name, 0) + 1
+
+        print(f"{n_turns}: capacity usage")
+
+        for route in self.routes:
+            for hub in route.hubs:
+                if hub.role == HubRole.REGULAR:
+                    usage = hub_usage.get(hub.name, 0)
+                    print(
+                        f"Zone {hub.name}: "
+                        f"{usage}/{hub.max_capacity} drones"
+                    )
+
+            for connection in route.connections:
+                usage = connection_usage.get(connection.name(), 0)
+                print(
+                    f"Connection {connection.name()}: "
+                    f"{usage}/{connection.max_capacity} capacity used"
+                )
+
     def run(self) -> None:
         self.create_drones()
         n_turns: int = 0
@@ -223,3 +274,5 @@ class Simulator:
             n_turns += 1
             # self.print_output_line(n_turns)
             self.print_output_line(n_turns, moves)
+            if self.show_info:
+                self.print_capacity_info(n_turns, moves)

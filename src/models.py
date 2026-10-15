@@ -26,6 +26,7 @@ class Hub(BaseModel):
     zone: ZoneType = ZoneType.NORMAL
     max_capacity: int = Field(gt=0, default=1, alias='max_drones')
     remaining_capacity: int = Field(ge=0, default=1, alias='max_drones')
+    occupancy: int = Field(ge=0, default=0)
     color: str = "none"
 
 
@@ -35,6 +36,7 @@ class Connection(BaseModel):
     end2: Hub  # junction1
     max_capacity: int = Field(gt=0, default=1, alias='max_link_capacity')
     remaining_capacity: int = Field(ge=0, default=1, alias='max_link_capacity')
+    occupancy: int = Field(ge=0, default=0)
 
     def key(self) -> frozenset[str]:
         return frozenset({self.end1.name, self.end2.name})

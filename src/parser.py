@@ -30,9 +30,13 @@ class Parser:
                 case "nb_drones":
                     raise ValueError(f"line {l_nb}: nb_drones already defined")
                 case "hub" | "start_hub" | "end_hub":
+                    if typ == "start_hub":
+                        self.check_unique_role(HubRole.START, l_nb)
+                    elif typ == "end_hub":
+                        self.check_unique_role(HubRole.END, l_nb)
                     hub = self.hub_config(l_nb, typ, attrs)
                     if self.hub_exists(hub):
-                        raise ValueError(f"line {l_nb}: hub duplicate")
+                        raise ValueError(f"line {l_nb}: duplicate hub name")
                     # print(hub)
                     self.hubs.append(hub)
                 case "connection":
@@ -54,13 +58,14 @@ class Parser:
         metadata: dict[str, str] = {}  # dict to be fed in Hub object model
         if len(attrs) < 3:
             raise ValueError(f"line {l_nb}: hub needs name, x, y coordinates")
+
         # after name, x, y the next token must begin metadata
         if len(attrs) > 3 and not attrs[3].startswith("["):
             raise ValueError(
                 f"line {l_nb}: invalid hub format: "
-                "expected <name> <x> <y> [metadata]; "
-                "hub names cannot contain spaces and exactly two coordinates are required"
-            )
+                "expected <name> <x> <y> [metadata]; ")
+
+        # assign roles to hubs:
         match typ:
             case "start_hub":
                 role = HubRole.START
@@ -68,31 +73,53 @@ class Parser:
                 role = HubRole.END
             case "hub":
                 role = HubRole.REGULAR
+
+        # check the name format
         name = attrs[0]
-        if "-" in name or " " in name:
+        if "-" in name or " " in name:  # space will not be there anyway
             raise ValueError(f"line {l_nb}: hubname can't contain '-' or ' '")
+
         if len(attrs) > 3:
+            # check if x, y coordinates are integers:
+            try:
+                int(attrs[1])
+                int(attrs[2])
+            except ValueError as e:
+                raise ValueError(
+                    f"line {l_nb}: hub coordinates must be integers"
+                ) from e
+
+            # check if metadata are enclosed in brackets []:
             if not attrs[3].startswith("[") or not attrs[-1].endswith("]"):
                 raise ValueError(f"line {l_nb}: metadata must be inside of []")
-            metadata_parts: list[str] = attrs[3:]  # separate list for metadata
+
+            # create separate list for metadata
+            metadata_parts: list[str] = attrs[3:]
             metadata_parts[0] = metadata_parts[0].removeprefix("[")
             metadata_parts[-1] = metadata_parts[-1].removesuffix("]")
             # print(metadata_parts)
 
+            # checking format of each metadata in the list:
             for part in metadata_parts:
                 if "=" not in part:
                     raise ValueError(f"line {l_nb}: invalid metadata {part}")
-                meta, spec = part.split('=', 1)  # color=gray -> color gray
-                if not meta or not spec:  # missing data before/after =
+                # color=gray -> color gray
+                meta, spec = part.split('=', 1)
+                # missing data before/after =
+                if not meta or not spec:
                     raise ValueError(f"line {l_nb}: invalid metadata {part}")
                 # print(meta)
+                # add {meta: spec} to metadata dictionary
                 match meta:
                     case "color" | "max_drones" | "zone":
                         metadata[meta] = spec
                     case _:
                         raise ValueError(f"line {l_nb}: unknown metadata")
+        # remove "max_drones" from metadata dict if it exists;
+        # if it doesn't exist, return None instead of raising an error
+        # will become 1 by default, but later will be ignored
         if role in (HubRole.START, HubRole.END):
-            metadata.pop("max_drones", None)  # 1 by default, will be ignored
+            metadata.pop("max_drones", None)
         try:
             return Hub(
                 l_nb=l_nb,
@@ -109,6 +136,19 @@ class Parser:
             raise ValueError(
                 f"line {l_nb}: invalid {field} value '{value}'"
             ) from e
+
+    def check_unique_role(self, role: HubRole, l_nb: int,) -> None:
+        '''
+        Check in already created hubs for the first (next) (duplicate) hub
+        whose role matches the role we are looking for; if none exists,
+        return None take the first value produces by the generator.
+        '''
+        existing = next((hub for hub in self.hubs if hub.role == role), None)
+        if existing is not None:
+            raise ValueError(
+                f"line {l_nb}: multiple {role.value}_hub zones; "
+                f"{role.value}_hub already defined as "
+                f"'{existing.name}' on line {existing.l_nb}")
 
     def hub_exists(self, hub: Hub) -> bool:
         for already in self.hubs:

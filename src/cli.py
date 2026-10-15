@@ -17,6 +17,12 @@ def parse_arguments() -> argparse.Namespace:
         help="Path to the map graph file"
     )
 
+    parser.add_argument(  # DELETE !!!!!!!!!!!!
+        "--info",
+        action="store_true",
+        help="Display zone and connection capacity usage for each turn",
+    )
+
     args = parser.parse_args()
     # print(type(args.input))  # prints: <class 'pathlib.PosixPath'>
     # print(args.input.name)  # prints file name: function_calling_tests.json

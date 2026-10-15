@@ -41,7 +41,7 @@ def main() -> None:
             print()
         plan = Planner(routes, map_config.nb_drones)
         plan.assign_drones()  # how many drones to each of the routes
-        simulator = Simulator(map_config, routes)
+        simulator = Simulator(map_config, routes, show_info=args.info)
         simulator.run()
         # see that all are arrived to the end hub:
         # for hub in map_config.hubs:

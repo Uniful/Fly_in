@@ -16,7 +16,7 @@ install:
 
 run:
 	@echo "Running the main script..."
-	uv run python -m src $(MAP)
+	uv run python -m src $(MAP) --info  # DELETE!!!!
 
 # ask if a file needed here for debug
 debug:
