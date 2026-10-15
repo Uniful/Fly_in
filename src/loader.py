@@ -9,7 +9,7 @@ class Loader:
         try:
             with open(self.filename, 'r') as f:
                 for l_nb, line in enumerate(f, start=1):
-                    line = line.strip()
+                    line = line.split("#")[0].strip()
                     # ignore empty lines and comments
                     if not line or line.startswith('#'):
                         continue
