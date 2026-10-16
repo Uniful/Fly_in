@@ -1,8 +1,18 @@
+# cli.py
+
 import argparse
 from pathlib import Path
 
 
 def parse_arguments() -> argparse.Namespace:
+    """
+    Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(
         prog="fly_in",
         description="Fly-In pathfinding program",

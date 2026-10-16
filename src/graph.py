@@ -1,10 +1,32 @@
 # graph.py
+"""Represent the Fly-In graph and find capacity-aware shortest routes."""
 
 from .models import MapConfig, Connection, Hub, HubRole, ZoneType, Route
 
 
 class Graph:
+    """
+    Represent the zone network and find routes through it.
+
+    The graph uses an adjacency dictionary containing the connections
+    associated with each hub. Routes are found using a Dijkstra-based
+    shortest-path algorithm that also considers zone types, priority
+    zones, and remaining hub and connection capacities.
+
+    Parameters
+    ----------
+    config : MapConfig
+        Validated map configuration containing hubs and connections.
+    """
     def __init__(self, config: MapConfig) -> None:
+        """
+        Initialize the graph from a map configuration.
+
+        Parameters
+        ----------
+        config : MapConfig
+            Validated map configuration.
+        """
         self.hubs: list[Hub] = config.hubs
         self.connections: list[Connection] = config.connections
         self.adjacency: dict[str, list[Connection]] = {}
@@ -26,6 +48,24 @@ class Graph:
             self.adjacency[hub.name] = hub_connections
 
     def neighbours(self, hub: str) -> list[Hub]:  # hub: "A"
+        """
+        Return all hubs directly connected to a given hub.
+
+        Parameters
+        ----------
+        hub : str
+            Name of the hub whose neighbours are requested.
+
+        Returns
+        -------
+        list[Hub]
+            Hubs connected to the given hub.
+
+        Raises
+        ------
+        ValueError
+            If the hub does not exist in the graph.
+        """
         if hub not in self.adjacency:  # checking keys of dict
             raise ValueError(f"Hub '{hub}' does not exist")
         neighbours_list: list[Hub] = []
@@ -37,6 +77,22 @@ class Graph:
         return neighbours_list
 
     def init_distances(self) -> dict[str, float]:
+        """
+        Initialize Dijkstra distances for all hubs.
+
+        The start hub receives a distance of zero and every other hub
+        is initialized to infinity.
+
+        Returns
+        -------
+        dict[str, float]
+            Mapping of hub names to their initial distances.
+
+        Raises
+        ------
+        ValueError
+            If the graph has no start hub.
+        """
         if self.start is None:
             raise ValueError("Graph has no start hub")
         distances: dict[str, float] = {}
@@ -48,6 +104,19 @@ class Graph:
         return distances
 
     def get_cost(self, zone: ZoneType) -> int | None:
+        """
+        Return the movement cost of entering a zone type.
+
+        Parameters
+        ----------
+        zone : ZoneType
+            Type of the destination zone.
+
+        Returns
+        -------
+        int or None
+            Movement cost in turns, or None if the zone is blocked.
+        """
         if zone in (ZoneType.NORMAL, ZoneType.PRIORITY):
             return 1
         elif zone == ZoneType.RESTRICTED:
@@ -56,12 +125,50 @@ class Graph:
             return None
 
     def get_hub(self, name: str) -> Hub:
+        """
+        Find a hub by name.
+
+        Parameters
+        ----------
+        name : str
+            Name of the requested hub.
+
+        Returns
+        -------
+        Hub
+            Hub with the requested name.
+
+        Raises
+        ------
+        ValueError
+            If no hub with the given name exists.
+        """
         for hub in self.hubs:
             if name == hub.name:
                 return hub
         raise ValueError(f"Hub '{name}' does not exist")
 
     def get_connection(self, hub1: str, hub2: str) -> Connection:
+        """
+        Find the bidirectional connection between two hubs.
+
+        Parameters
+        ----------
+        hub1 : str
+            Name of the first hub.
+        hub2 : str
+            Name of the second hub.
+
+        Returns
+        -------
+        Connection
+            Connection joining the two hubs.
+
+        Raises
+        ------
+        ValueError
+            If no connection exists between the hubs.
+        """
         for connection in self.connections:
             if (
                 (hub1 == connection.end1.name and hub2 == connection.end2.name)
@@ -73,6 +180,25 @@ class Graph:
 
     def reconstruct_path(self,
                          previous: dict[str, str | None]) -> list[str]:
+        """
+        Reconstruct a shortest path as a list of hub names.
+
+        Parameters
+        ----------
+        previous : dict[str, str | None]
+            Mapping of each reached hub to its predecessor.
+
+        Returns
+        -------
+        list[str]
+            Hub names ordered from the start hub to the end hub.
+
+        Raises
+        ------
+        ValueError
+            If the graph has no start or end hub, or no complete path
+            can be reconstructed.
+        """
         if self.start is None or self.end is None:
             raise ValueError("Graph has no start or end hub")
         current: str = self.end.name
@@ -92,12 +218,36 @@ class Graph:
     # change string-string path from dijkstra path to hubs
     def reconstruct_hubs(self,
                          previous: dict[str, str | None]) -> list[Hub]:
+        """
+        Reconstruct the route as Hub objects.
+
+        Remaining capacity is decreased for each regular hub reserved
+        by the reconstructed route. Start and end hub capacities are
+        not reduced.
+
+        Parameters
+        ----------
+        previous : dict[str, str | None]
+            Mapping of each reached hub to its predecessor.
+
+        Returns
+        -------
+        list[Hub]
+            Hubs ordered from the start hub to the end hub.
+
+        Raises
+        ------
+        ValueError
+            If the graph has no start or end hub, or the path cannot
+            be reconstructed.
+        """
         if self.start is None or self.end is None:
             raise ValueError("Graph has no start or end hub")
         current: Hub = self.end
         start_end_hubs: list[Hub] = [current]
         while current != self.start:
-            before: str = previous.get(current.name)  # starts current end.name
+            # starts current end.name:
+            before: str | None = previous.get(current.name)
             if before is None:
                 raise ValueError("No path from start to end")
             before_hub: Hub = self.get_hub(before)
@@ -114,6 +264,22 @@ class Graph:
     # from dijkstra Hub path to Connection list
     def reconstruct_connections(self,
                                 path_hubs: list[Hub]) -> list[Connection]:
+        """
+        Build the connection sequence for a reconstructed route.
+
+        Remaining connection capacity is decreased for every connection
+        reserved by the route.
+
+        Parameters
+        ----------
+        path_hubs : list[Hub]
+            Hubs forming the route from start to end.
+
+        Returns
+        -------
+        list[Connection]
+            Connections joining consecutive hubs in the route.
+        """
         start_end_connections: list[Connection] = []
         for i in range(len(path_hubs) - 1):
             hub1 = path_hubs[i]
@@ -125,10 +291,25 @@ class Graph:
         return start_end_connections
 
     def run(self) -> Route | None:
-        '''
-        find the shortest path from start to end considering distances
+        """
+        Find the next available shortest route from start to end.
         start = current
-        '''
+        Dijkstra's algorithm is used with movement costs determined by
+        destination zone type. Remaining hub and connection capacities
+        are respected. When paths have the same cost, the path containing
+        more priority zones is preferred.
+
+        Returns
+        -------
+        Route or None
+            The next available route, or None if no additional route
+            can be found with the remaining capacities.
+
+        Raises
+        ------
+        ValueError
+            If the graph has no start or end hub.
+        """
         if self.start is None or self.end is None:
             raise ValueError("Graph has no start or end hub")
         current: str = self.start.name  # just take a str name of Hub

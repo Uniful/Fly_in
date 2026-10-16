@@ -1,20 +1,65 @@
 # simulator.py
+"""Simulate turn-by-turn drone movement through the Fly-In network."""
 
 from .models import MapConfig, ZoneType, HubRole, Hub, Connection, Route, Drone
 from .colors import Colors
 
 
 class Simulator:
+    """
+    Simulate drone movement along assigned routes.
+
+    The simulator plans all movements using future positions before
+    committing a turn. It enforces hub and connection capacities,
+    handles two-turn movement toward restricted zones, and produces
+    visual terminal output.
+
+    Parameters
+    ----------
+    config : MapConfig
+        Parsed map configuration.
+    routes : list[Route]
+        Routes with drones assigned by the planner.
+    show_info : bool, optional
+        Whether to display hub and connection capacity usage.
+    """
     def __init__(self,
                  config: MapConfig,
                  routes: list[Route],
                  show_info: bool = False) -> None:
+        """
+        Initialize the simulator.
+
+        Parameters
+        ----------
+        config : MapConfig
+            Parsed map configuration.
+        routes : list[Route]
+            Routes available to the drones.
+        show_info : bool, optional
+            Enable capacity information output.
+
+        Returns
+        -------
+        None
+        """
         self.config = config
         self.routes = routes
         self.drones: list[Drone] = []
         self.show_info = show_info
 
     def create_drones(self) -> None:
+        """
+        Create drones and assign them to their planned routes.
+
+        Drone identifiers are distributed across the routes according to
+        the number of drones previously assigned to each route by the
+        planner.
+
+        Returns
+        -------
+        None
+        """
         assigned: list[int] = [0] * len(self.routes)  # [0, 0] if 2 routes
         # print(assigned)
         drone_id: int = 0  # 5 drones
@@ -31,6 +76,19 @@ class Simulator:
                         break
 
     def hub_occupancy(self, hub: Hub) -> int:
+        """
+        Count drones planned to occupy a hub after the current turn.
+
+        Parameters
+        ----------
+        hub : Hub
+            Hub whose future occupancy is requested.
+
+        Returns
+        -------
+        int
+            Number of drones whose planned future state is on the hub.
+        """
         drones_on_hub: int = 0
         for drone in self.drones:
             if (
@@ -41,6 +99,22 @@ class Simulator:
         return drones_on_hub
 
     def connection_occupancy(self, connection: Connection) -> int:
+        """
+        Count drones planned to remain on a connection after the turn.
+
+        This is mainly used for drones travelling toward restricted zones,
+        where crossing the connection requires more than one turn.
+
+        Parameters
+        ----------
+        connection : Connection
+            Connection whose future occupancy is requested.
+
+        Returns
+        -------
+        int
+            Number of drones whose future connection is the given connection.
+        """
         drones_on_connection: int = 0
         for drone in self.drones:
             if drone.future_connection == connection:
@@ -48,6 +122,21 @@ class Simulator:
         return drones_on_connection
 
     def hub_is_free(self, hub: Hub) -> bool:
+        """
+        Check whether a hub can accept another drone.
+
+        Start and end hubs are treated as having unlimited occupancy.
+
+        Parameters
+        ----------
+        hub : Hub
+            Hub to check.
+
+        Returns
+        -------
+        bool
+            True if another drone may enter the hub, otherwise False.
+        """
         if hub.role in (HubRole.START, HubRole.END):
             return True
         return self.hub_occupancy(hub) < hub.max_capacity
@@ -56,17 +145,45 @@ class Simulator:
     #     return self.connection_occupancy(c) < c.max_capacity
 
     def hub_usage(self) -> None:
+        """
+        Update the current occupancy stored in every hub.
+
+        Existing occupancy values are reset before counting drones whose
+        committed state is currently on a hub.
+
+        Returns
+        -------
+        None
+        """
         # reset occupancy
         for hub in self.config.hubs:
-            hub.occupancy: int = 0
+            hub.occupancy = 0
         # count current drones in hubs
         for drone in self.drones:
             if drone.connection is None:
-                hub: Hub = drone.route.hubs[drone.position]
+                hub = drone.route.hubs[drone.position]
                 hub.occupancy += 1
 
     def connection_usage(
             self, moves: list[tuple[Drone, bool]]) -> None:
+        """
+        Update connection capacity usage for the current turn.
+
+        Normal one-turn traversals and drones ending the turn on restricted
+        connections are counted. A drone leaving a restricted connection is
+        not counted because that connection is freed during the same turn.
+
+        Parameters
+        ----------
+        moves : list[tuple[Drone, bool]]
+            Approved movements for the turn. The boolean is True when the
+            drone ends the turn on a restricted connection and False when
+            it arrives at a hub.
+
+        Returns
+        -------
+        None
+        """
         # reset occupancy
         for connection in self.config.connections:
             connection.occupancy = 0
@@ -84,6 +201,14 @@ class Simulator:
                     c.occupancy += 1
 
     def all_finished(self) -> bool:
+        """
+        Check whether all drones have reached their destination hubs.
+
+        Returns
+        -------
+        bool
+            True if every drone is at the final hub of its route.
+        """
         # return True if, for all drones,
         # if drone's position equals the index of the last hub
         return all(
@@ -94,6 +219,23 @@ class Simulator:
     def print_output_line(self,
                           n_turns: int,
                           moves: list[tuple[Drone, bool]]) -> None:
+        """
+        Print the drone movements performed during one simulation turn.
+
+        Zone arrivals are displayed using the configured zone color, while
+        movements on restricted connections use the default terminal color.
+
+        Parameters
+        ----------
+        n_turns : int
+            Current simulation turn number.
+        moves : list[tuple[Drone, bool]]
+            Drone movements approved for the current turn.
+
+        Returns
+        -------
+        None
+        """
         print(f"{n_turns}: ", end="")
         for drone, entering_connection in moves:
             if entering_connection:
@@ -112,28 +254,29 @@ class Simulator:
                       f"{Colors.RESET}", end="")
         print()
 
-    # def print_output_line(self, n_turns: int) -> None:
-    #     print(f"{n_turns}: ", end="")
-    #     for d in self.drones:
-    #         if d.arrived:
-    #             continue
-    #         if d.connection == None:
-    #             if d.position == 0:
-    #                 continue
-    #             print(f"D{d.id}-"
-    #                   f"{d.route.hubs[d.position].name} ", end="")
-    #         else:
-    #             print(f"D{d.id}-"
-    #                   f"{d.route.connections[d.position].name()} ", end="")
-    #     print()
-
     def free_slots_next_turn(self, hub: Hub) -> int:
-        '''
+        """
+        Estimate how many places will be available in a hub next turn.
+
+        The method considers drones expected to occupy the hub after the
+        current turn and estimates how many of them can leave during the
+        following turn. This is used before allowing drones to enter a
+        restricted connection.
         occupants = drones that will be on hub
         leaving = how many can leave next turn
         staying = occupants - leaving
         free = capacity - staying
-        '''
+
+        Parameters
+        ----------
+        hub : Hub
+            Destination hub whose future capacity is evaluated.
+
+        Returns
+        -------
+        int
+            Estimated number of available places in the hub next turn.
+        """
         # START and END are unlimited
         if hub.role in (HubRole.START, HubRole.END):
             return self.config.nb_drones
@@ -173,6 +316,22 @@ class Simulator:
         return max(0, hub.max_capacity - staying)
 
     def move_plan(self) -> list[tuple[Drone, bool]]:
+        """
+        Plan all drone movements for the next simulation turn.
+
+        Current drone states are first copied into future states. Drones are
+        then considered according to movement priority, while hub capacity,
+        connection capacity, blocked zones, restricted movement, and future
+        restricted-zone reservations are taken into account.
+
+        No current drone state is committed by this method.
+
+        Returns
+        -------
+        list[tuple[Drone, bool]]
+            Approved movements. Each tuple contains the drone and a boolean
+            indicating whether it ends the turn on a restricted connection.
+        """
         # reset future state to current state at the beginning of each turn
         for drone in self.drones:
             drone.future_position = drone.position
@@ -242,6 +401,21 @@ class Simulator:
         return moves
 
     def move(self, moves: list[tuple[Drone, bool]]) -> None:
+        """
+        Commit the movements planned for the current turn.
+
+        Each moving drone's future position and connection become its
+        current state. Hub occupancy and connection usage are then updated.
+
+        Parameters
+        ----------
+        moves : list[tuple[Drone, bool]]
+            Movements approved by `move_plan`.
+
+        Returns
+        -------
+        None
+        """
         for d, _ in moves:
             d.position = d.future_position
             d.connection = d.future_connection
@@ -249,6 +423,16 @@ class Simulator:
         self.connection_usage(moves)
 
     def print_capacity_info(self) -> None:
+        """
+        Print hub occupancy and connection usage information.
+
+        The information reflects the committed drone positions and
+        connection capacity used during the current simulation turn.
+
+        Returns
+        -------
+        None
+        """
         for hub in self.config.hubs:
             print(
                 f"Zone {hub.name}: "
@@ -257,11 +441,23 @@ class Simulator:
         for connection in self.config.connections:
             print(
                 f"Connection {connection.name()}: "
-                f"{connection.occupancy}/{connection.max_capacity} capacity used"
+                f"{connection.occupancy}/{connection.max_capacity} "
+                "capacity used"
             )
         print()
 
     def run(self) -> None:
+        """
+        Run the simulation until every drone reaches the end hub.
+
+        Drones are created first. Each turn then consists of planning the
+        movements, committing them, printing the movement output, and
+        optionally displaying capacity information.
+
+        Returns
+        -------
+        None
+        """
         self.create_drones()
         n_turns: int = 0
 
@@ -269,7 +465,6 @@ class Simulator:
             moves: list[tuple[Drone, bool]] = self.move_plan()
             self.move(moves)
             n_turns += 1
-            # self.print_output_line(n_turns)
             self.print_output_line(n_turns, moves)
             if self.show_info:
                 self.print_capacity_info()

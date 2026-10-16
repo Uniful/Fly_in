@@ -1,17 +1,49 @@
 # parser.py
+"""Parse and validate Fly-In map configuration data."""
 
-from .models import Hub, Connection, MapConfig, HubRole
 from pydantic import ValidationError
+from .models import Hub, Connection, MapConfig, HubRole
 
 
 # start_hub: start 0 0 [zone=priority color=cyan max_drones=3]
 class Parser:
+    """
+    Parse map configuration lines into Fly-In model objects.
+
+    Parameters
+    ----------
+    lines : list[tuple[int, str, list[str]]]
+        Preprocessed map lines containing the original line number,
+        configuration type, and attributes.
+    """
     def __init__(self, lines: list[tuple[int, str, list[str]]]) -> None:
+        """
+        Initialize the map parser.
+
+        Parameters
+        ----------
+        lines : list[tuple[int, str, list[str]]]
+            Preprocessed configuration lines.
+        """
         self.lines = lines
         self.hubs: list[Hub] = []
         self.connections: list[Connection] = []
 
     def parse_map(self) -> MapConfig:
+        """
+        Parse all configuration lines and build the map configuration.
+
+        Returns
+        -------
+        MapConfig
+            Validated map containing the drone count, hubs, and connections.
+
+        Raises
+        ------
+        ValueError
+            If the map is empty, malformed, contains duplicate definitions,
+            or contains unsupported configuration data.
+        """
         if not self.lines:
             raise ValueError("Map file is empty")
         l_nb, typ, attrs = self.lines[0]  # the first entry should be nb_drones
@@ -55,6 +87,29 @@ class Parser:
         )
 
     def hub_config(self, l_nb: int, typ: str, attrs: list[str]) -> Hub:
+        """
+        Create and validate a hub from its configuration attributes.
+
+        Parameters
+        ----------
+        l_nb : int
+            Original line number in the map file.
+        typ : str
+            Hub configuration type: hub, start_hub, or end_hub.
+        attrs : list[str]
+            Hub name, coordinates, and optional metadata.
+
+        Returns
+        -------
+        Hub
+            Validated hub model.
+
+        Raises
+        ------
+        ValueError
+            If the hub syntax, coordinates, name, metadata, or values
+            are invalid.
+        """
         metadata: dict[str, str] = {}  # dict to be fed in Hub object model
         if len(attrs) < 3:
             raise ValueError(f"line {l_nb}: hub needs name, x, y coordinates")
@@ -66,6 +121,7 @@ class Parser:
                 "expected <name> <x> <y> [metadata]; ")
 
         # assign roles to hubs:
+        role: HubRole
         match typ:
             case "start_hub":
                 role = HubRole.START
@@ -73,23 +129,24 @@ class Parser:
                 role = HubRole.END
             case "hub":
                 role = HubRole.REGULAR
+            case _:
+                raise ValueError(f"line {l_nb}: invalid hub type '{typ}'")
 
         # check the name format
         name = attrs[0]
         if "-" in name or " " in name:  # space will not be there anyway
             raise ValueError(f"line {l_nb}: hubname can't contain '-' or ' '")
 
-        if len(attrs) > 3:
-            # check if x, y coordinates are integers:
-            try:
-                int(attrs[1])
-                int(attrs[2])
-            except ValueError as e:
-                raise ValueError(
-                    f"line {l_nb}: hub coordinates must be integers"
-                ) from e
+        # check if x, y coordinates are integers:
+        try:
+            x: int = int(attrs[1])
+            y: int = int(attrs[2])
+        except ValueError as e:
+            raise ValueError(
+                f"line {l_nb}: hub coordinates must be integers") from e
 
             # check if metadata are enclosed in brackets []:
+        if len(attrs) > 3:
             if not attrs[3].startswith("[") or not attrs[-1].endswith("]"):
                 raise ValueError(f"line {l_nb}: metadata must be inside of []")
 
@@ -120,15 +177,17 @@ class Parser:
         # will become 1 by default, but later will be ignored
         if role in (HubRole.START, HubRole.END):
             metadata.pop("max_drones", None)
+
+        hub_data: dict[str, object] = {
+            "l_nb": l_nb,
+            "role": role,
+            "name": attrs[0],
+            "x": x,
+            "y": y,
+            **metadata,
+        }
         try:
-            return Hub(
-                l_nb=l_nb,
-                role=role,
-                name=attrs[0],
-                x=attrs[1],
-                y=attrs[2],
-                **metadata,
-            )
+            return Hub.model_validate(hub_data)
         except ValidationError as e:
             error = e.errors()[0]
             field = error["loc"][0]
@@ -138,11 +197,24 @@ class Parser:
             ) from e
 
     def check_unique_role(self, role: HubRole, l_nb: int,) -> None:
-        '''
-        Check in already created hubs for the first (next) (duplicate) hub
+        """
+        Ensure that START or END has not already been defined.
+        Checks in already created hubs for the first (next) (duplicate) hub
         whose role matches the role we are looking for; if none exists,
-        return None take the first value produces by the generator.
-        '''
+        return None take the first value produced by the generator.
+
+        Parameters
+        ----------
+        role : HubRole
+            Hub role to check for duplicates.
+        l_nb : int
+            Line number of the new hub definition.
+
+        Raises
+        ------
+        ValueError
+            If a hub with the same special role already exists.
+        """
         existing = next((hub for hub in self.hubs if hub.role == role), None)
         if existing is not None:
             raise ValueError(
@@ -151,12 +223,46 @@ class Parser:
                 f"'{existing.name}' on line {existing.l_nb}")
 
     def hub_exists(self, hub: Hub) -> bool:
+        """
+        Check whether a hub with the same name already exists.
+
+        Parameters
+        ----------
+        hub : Hub
+            Hub to compare with existing hubs.
+
+        Returns
+        -------
+        bool
+            True if a hub with the same name exists, otherwise False.
+        """
         for already in self.hubs:
             if already.name == hub.name:
                 return True
         return False
 
     def connect_config(self, l_nb: int, attrs: list[str]) -> Connection:
+        """
+        Create and validate a connection from its configuration attributes.
+
+        Parameters
+        ----------
+        l_nb : int
+            Original line number in the map file.
+        attrs : list[str]
+            Connection endpoints and optional capacity metadata.
+
+        Returns
+        -------
+        Connection
+            Validated connection model.
+
+        Raises
+        ------
+        ValueError
+            If the connection syntax, endpoints, metadata, or capacity
+            are invalid.
+        """
         # print(attrs)
         # dict to be fed in Connection object model:
         metadata: dict[str, str] = {}
@@ -191,13 +297,16 @@ class Parser:
                 raise ValueError(f"line {l_nb}: invalid metadata '{max_str}'")
             metadata[key] = value
             # print(metadata)
+
+        # model_validate() takes raw input, let Pydantic validate/convert it
+        connection_data: dict[str, object] = {
+            "l_nb": l_nb,
+            "end1": end1,
+            "end2": end2,
+            **metadata,
+        }
         try:
-            return Connection(
-                l_nb=l_nb,
-                end1=end1,
-                end2=end2,
-                **metadata,
-            )
+            return Connection.model_validate(connection_data)
         except ValidationError as e:
             error = e.errors()[0]
             field = error["loc"][0]
@@ -207,6 +316,20 @@ class Parser:
             ) from e
 
     def connection_exists(self, connection: Connection) -> bool:
+        """
+        Check whether the same bidirectional connection already exists.
+
+        Parameters
+        ----------
+        connection : Connection
+            Connection to compare with existing connections.
+
+        Returns
+        -------
+        bool
+            True if the same connection exists in either direction,
+            otherwise False.
+        """
         for already in self.connections:
             same_connection: bool = (
                 already.end1 == connection.end1

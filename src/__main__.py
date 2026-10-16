@@ -1,7 +1,11 @@
-'''
+"""
 adding __main__.py module to any Python package
 to make that package directly executable
-'''
+
+Run the Fly-In application.
+Load and parse a map, find available routes, assign drones to routes,
+and run the simulation.
+"""
 
 import argparse
 from .cli import parse_arguments
@@ -14,16 +18,22 @@ from .simulator import Simulator
 
 
 def main() -> None:
-    args: argparse.Namespace = parse_arguments()
-    print(args.mapfile)
+    """
+    Run the Fly-In pathfinding and drone simulation.
 
-    line_config: list[tuple[int, str, list[str]]] = []
+    Returns
+    -------
+    None
+    """
+    args: argparse.Namespace = parse_arguments()
+    print(args.mapfile)  # prints out the mapfile path
+
     try:
         loader = Loader(args.mapfile)
-        line_config = loader.load_map()
+        line_config: list[tuple[int, str, list[str]]] = loader.load_map()
         parser = Parser(line_config)
         map_config: MapConfig = parser.parse_map()
-        graph = Graph(map_config)
+        graph: Graph = Graph(map_config)
         # print(graph.adjacency)
         routes: list[Route] = []
         while True:
