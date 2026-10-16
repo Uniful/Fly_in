@@ -55,6 +55,34 @@ class Simulator:
     # def connection_is_free(self, c: Connection) -> bool:
     #     return self.connection_occupancy(c) < c.max_capacity
 
+    def hub_usage(self) -> None:
+        # reset occupancy
+        for hub in self.config.hubs:
+            hub.occupancy: int = 0
+        # count current drones in hubs
+        for drone in self.drones:
+            if drone.connection is None:
+                hub: Hub = drone.route.hubs[drone.position]
+                hub.occupancy += 1
+
+    def connection_usage(
+            self, moves: list[tuple[Drone, bool]]) -> None:
+        # reset occupancy
+        for connection in self.config.connections:
+            connection.occupancy = 0
+        # count current drones on connection:
+        for drone, entering_connection in moves:
+            if entering_connection:
+                # drone finishes this turn ON the restricted connection
+                c = drone.route.connections[drone.position]
+                c.occupancy += 1
+            else:
+                hub = drone.route.hubs[drone.position]
+                # Normal 1-turn connection traversal
+                if hub.zone != ZoneType.RESTRICTED:
+                    c = drone.route.connections[drone.position - 1]
+                    c.occupancy += 1
+
     def all_finished(self) -> bool:
         # return True if, for all drones,
         # if drone's position equals the index of the last hub
@@ -208,61 +236,30 @@ class Simulator:
                         d.future_connection = next_connection
                         moves.append((d, True))
                         reserved_arrivals[next_hub.name] = reserved + 1
-                    else:
-                        print(f"D{d.id} stays at "
-                              f"{d.route.hubs[d.position].name}")
+                    # else:
+                    #     print(f"D{d.id} stays at "
+                    #           f"{d.route.hubs[d.position].name}")
         return moves
 
     def move(self, moves: list[tuple[Drone, bool]]) -> None:
         for d, _ in moves:
             d.position = d.future_position
             d.connection = d.future_connection
-            # if entering_connection == True:
-            #     d.connection = d.future_connection
-            # else:
-            #     d.position = d.future_position
+        self.hub_usage()
+        self.connection_usage(moves)
 
-    def print_capacity_info(
-        self,
-        n_turns: int,
-        moves: list[tuple[Drone, bool]],
-    ) -> None:
-        hub_usage: dict[str, int] = {}
-        connection_usage: dict[str, int] = {}
-
-        # Current hub occupancy after the move
-        for drone in self.drones:
-            if drone.connection is None:
-                hub = drone.route.hubs[drone.position]
-                hub_usage[hub.name] = hub_usage.get(hub.name, 0) + 1
-
-        # Connections used during this turn
-        for drone, entering_connection in moves:
-            if entering_connection:
-                connection = drone.route.connections[drone.position]
-            else:
-                connection = drone.route.connections[drone.position - 1]
-
-            name = connection.name()
-            connection_usage[name] = connection_usage.get(name, 0) + 1
-
-        print(f"{n_turns}: capacity usage")
-
-        for route in self.routes:
-            for hub in route.hubs:
-                if hub.role == HubRole.REGULAR:
-                    usage = hub_usage.get(hub.name, 0)
-                    print(
-                        f"Zone {hub.name}: "
-                        f"{usage}/{hub.max_capacity} drones"
-                    )
-
-            for connection in route.connections:
-                usage = connection_usage.get(connection.name(), 0)
-                print(
-                    f"Connection {connection.name()}: "
-                    f"{usage}/{connection.max_capacity} capacity used"
-                )
+    def print_capacity_info(self) -> None:
+        for hub in self.config.hubs:
+            print(
+                f"Zone {hub.name}: "
+                f"{hub.occupancy}/{hub.max_capacity} drones"
+            )
+        for connection in self.config.connections:
+            print(
+                f"Connection {connection.name()}: "
+                f"{connection.occupancy}/{connection.max_capacity} capacity used"
+            )
+        print()
 
     def run(self) -> None:
         self.create_drones()
@@ -275,4 +272,4 @@ class Simulator:
             # self.print_output_line(n_turns)
             self.print_output_line(n_turns, moves)
             if self.show_info:
-                self.print_capacity_info(n_turns, moves)
+                self.print_capacity_info()
